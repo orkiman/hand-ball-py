@@ -6,33 +6,21 @@ mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 mp_hands = mp.solutions.hands
 
-
-
-
-# last_ball_x = 0
-# last_ball_y = 0
 last_ball = {'x': 0,
              'y': 0}
-class game:
-    last_hand=None
-    # def __init__(self):
-    #     last_hand=None
-g=game
+
 class Hand:
     id = -1
     x, y = 0, 0
     first_hand = True
 
 class Ball:
-    # x, y = 300, 0
-    # radius = 30
-    # speed = {'x': 0, 'y': 1}
     def __init__(self):
         self.init_ball()
 
     def init_ball(self):
         self.x, self.y = 300, 0
-        self.radius = 30
+        self.radius = 40
         self.speed = {'x': 0, 'y': 1}
 
 
@@ -42,51 +30,43 @@ last_hand = Hand()
 
 def draw_ball(image):
     image_height, image_width = image.shape[:2]
-    cv2.circle(image, (ball.x,int (ball.y)), ball.radius, (0, 255, 0), -1)
+    cv2.circle(image, (ball.x,int (ball.y)), ball.radius, (255, 0, 255), 10)
     ball.x = np.clip(ball.x + ball.speed['x'], 0 + ball.radius, image_width - ball.radius)
-    ball.y = np.clip(ball.y + ball.speed['y'], 0 + ball.radius, image_height - ball.radius)
-
+    ball.y = min(ball.y + ball.speed['y'], image_height - ball.radius) # + ball.radius, image_height - ball.radius)
+    if ball.x== image_width - ball.radius or ball.x == ball.radius:
+        ball.speed['x'] *= -1
+    if ball.y == image_height - ball.radius:
+        ball.speed['y'] *= -1
     ball.speed['y'] += 0.1
 
 
-def check_hit(current_hand):
+def check_hit(current_hand,image):
 
     image_height, image_width = image.shape[:2]
     current_hand_x = (image_width * current_hand.x)
     current_hand_y = (image_height * current_hand.y)
-    # print(ball.x, ball.y, current_hand_x, hand_y)
-    if math.sqrt((current_hand_x - ball.x) ** 2 + (current_hand_y - ball.y) ** 2) < ball.radius:
-        # print('******')
-        if not last_hand.first_hand:
+    if not last_hand.first_hand:
+        scale = 5
+        ax1 = int(current_hand_x)
+        ay1 = int(current_hand_y)
+        ax2 = int(current_hand_x + (current_hand_x-last_hand.x)*scale)
+        ay2 = int(current_hand_y + (current_hand_y-last_hand.y)*scale)
+        cv2.arrowedLine(image, (ax1, ay1), (ax2, ay2), (255, 0, 0), 2)
+        if math.sqrt((current_hand_x - ball.x) ** 2 + (current_hand_y - ball.y) ** 2) < ball.radius:
+            max_speed = 7
             x_speed = int((current_hand_x-last_hand.x))
             y_speed = int((current_hand_y-last_hand.y))
-            ball.speed['x'] = np.clip(x_speed,-5,5)
-            ball.speed['y'] = np.clip(y_speed,-5,5)
-            # print(current_hand_x,last_hand.x,x_speed,y_speed)
-            # print(ball.speed)
+            ball.speed['x'] = np.clip(x_speed,-max_speed,max_speed)
+            ball.speed['y'] = np.clip(y_speed,-max_speed,max_speed)
 
+            # draw_arrow(image)
     last_hand.x = current_hand_x
     last_hand.y = current_hand_y
     last_hand.first_hand = False
-
-
-
-
-
-class HandsManager:
-    hands=[]
-# def draw_ball(image, x, y, last_ball):
-#     # draw the ball in the tip of the finger
-#     image_height, image_width = image.shape[:2]
-#     cv2.circle(image, (int(image_width * x) , int(image_height * y)), 15, (0, 255, 0), -1)
-#     return last_ball
-
-
-
-def checkHit(image, currentHand, last_hand):
-    if(last_hand is None):
-        return
+def draw_arrow(current_hand,image):
     image_height, image_width = image.shape[:2]
+    current_hand_x = (image_width * current_hand.x)
+    current_hand_y = (image_height * current_hand.y)
     scale = 2000
     x1 = int(image_width * last_hand.x)
     y1 = int(image_height * last_hand.y)
@@ -95,9 +75,6 @@ def checkHit(image, currentHand, last_hand):
     cv2.arrowedLine(image,(x1, y1), (x2, y2),(255, 0, 0), 2)
     # image, start_point, end_point,
     # color, thickness
-
-
-tst = 1
 
 # For webcam input:
 cap = cv2.VideoCapture(0)
@@ -129,25 +106,12 @@ with mp_hands.Hands(
         #         print(handed)
         draw_ball(image)
         if results.multi_hand_landmarks:
-            counter = 0
-            # print(tst)
-            # tst += 1
             for hand_landmarks in results.multi_hand_landmarks :
-                counter+=1
-                # print(hand_landmarks.landmark[8], type(results.multi_handedness[0]))
-                # print(hand_landmarks.landmark[8], results.multi_handedness[0].label)
-                # print(results)
-                # print(type(results))
-
                 currentHand = hand_landmarks.landmark[8]
                 x = currentHand.x # 8 = finger tip
                 y = currentHand.y
-                # checkHit(image, currentHand, g.last_hand)
-                check_hit(currentHand)
-                g.last_hand = hand_landmarks.landmark[8]
-                # cv2.circle(image, ((int)(image_width * x), (int)(image_height * y)), 50, (0, 255, 0), -1)
-                # last_ball=draw_ball(image, x, y, last_ball)
-
+                check_hit(currentHand,image)
+                # draw landmarks
                 # mp_drawing.draw_landmarks(
                 #     image,
                 #     hand_landmarks,
@@ -155,16 +119,12 @@ with mp_hands.Hands(
                 #     mp_drawing_styles.get_default_hand_landmarks_style(),
                 #     mp_drawing_styles.get_default_hand_connections_style())
         # Flip the image horizontally for a selfie-view display.
-        # print(cv2.getWindowImageRect('Frame'))
-        #     print(counter)
-        #     exit(0)
-        # cv2.resizeWindow("frame", 999, 999)
-
         cv2.imshow('frame', cv2.flip(image, 1))
-        # cv2.imshow('MediaPipe Hands', cv2.flip(image, 1))
         key = cv2.waitKey(5) & 0xFF
+        # escape terminates
         if key == 27:
             break
+        # spcae reset:
         elif key == 32:
             ball.init_ball()
             print(key)
