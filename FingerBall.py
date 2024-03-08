@@ -46,35 +46,48 @@ def check_hit(current_hand,image):
     current_hand_x = (image_width * current_hand.x)
     current_hand_y = (image_height * current_hand.y)
     if not last_hand.first_hand:
+        # draw arrow:
         scale = 5
         ax1 = int(current_hand_x)
         ay1 = int(current_hand_y)
         ax2 = int(current_hand_x + (current_hand_x-last_hand.x)*scale)
         ay2 = int(current_hand_y + (current_hand_y-last_hand.y)*scale)
         cv2.arrowedLine(image, (ax1, ay1), (ax2, ay2), (255, 0, 0), 2)
+        # hit chack
         if math.sqrt((current_hand_x - ball.x) ** 2 + (current_hand_y - ball.y) ** 2) < ball.radius:
             max_speed = 7
             x_speed = int((current_hand_x-last_hand.x))
             y_speed = int((current_hand_y-last_hand.y))
             ball.speed['x'] = np.clip(x_speed,-max_speed,max_speed)
             ball.speed['y'] = np.clip(y_speed,-max_speed,max_speed)
-
-            # draw_arrow(image)
     last_hand.x = current_hand_x
     last_hand.y = current_hand_y
     last_hand.first_hand = False
-def draw_arrow(current_hand,image):
-    image_height, image_width = image.shape[:2]
-    current_hand_x = (image_width * current_hand.x)
-    current_hand_y = (image_height * current_hand.y)
-    scale = 2000
-    x1 = int(image_width * last_hand.x)
-    y1 = int(image_height * last_hand.y)
-    x2 = int(image_width * currentHand.x + (currentHand.x-last_hand.x) * scale)
-    y2 = int(image_height * currentHand.y + (currentHand.y-last_hand.y) * scale)
-    cv2.arrowedLine(image,(x1, y1), (x2, y2),(255, 0, 0), 2)
-    # image, start_point, end_point,
-    # color, thickness
+
+
+def addText(image):
+    image=cv2.flip(image, 1)
+    # font
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font = cv2.FONT_HERSHEY_SIMPLEX
+
+    # org
+    org = (50, 50)
+
+    # fontScale
+    fontScale = 1
+
+    # Blue color in BGR
+    color = (255, 0, 0)
+
+    # Line thickness of 2 px
+    thickness = 2
+
+    # Using cv2.putText() method
+    image = cv2.putText(image, 'Esc to exit', org, font,
+                        fontScale, color, thickness, cv2.LINE_AA)
+    return cv2.flip(image, 1)
+
 
 # For webcam input:
 cap = cv2.VideoCapture(0)
@@ -105,12 +118,14 @@ with mp_hands.Hands(
         #     for handed in results.multi_handedness:
         #         print(handed)
         draw_ball(image)
+        image = addText(image)
         if results.multi_hand_landmarks:
             for hand_landmarks in results.multi_hand_landmarks :
                 currentHand = hand_landmarks.landmark[8]
                 x = currentHand.x # 8 = finger tip
                 y = currentHand.y
                 check_hit(currentHand,image)
+                # cv2.putText(image,"press esc to end",)
                 # draw landmarks
                 # mp_drawing.draw_landmarks(
                 #     image,
